@@ -12,16 +12,16 @@ final class Gsm7
 {
 
     /** Max. znaků jedné SMS v GSM 7-bit (bez diakritiky). */
-    public const int SINGLE_LENGTH = 160;
+    public const int SingleLength = 160;
 
     /** Max. znaků jedné SMS v UCS-2 (s diakritikou / znakem mimo GSM 7-bit). */
-    public const int SINGLE_LENGTH_UCS2 = 70;
+    public const int SingleLengthUcs2 = 70;
 
     /** Znaků na segment vícedílné SMS (část místa zabere hlavička pro spojení). */
-    public const int MULTI_LENGTH = 153;
-    public const int MULTI_LENGTH_UCS2 = 67;
+    public const int MultiLength = 153;
+    public const int MultiLengthUcs2 = 67;
 
-    public const array MAP = [
+    public const array Map = [
         'Á' => 'A',
         'Ä' => 'A',
         'À' => 'A',
@@ -119,10 +119,10 @@ final class Gsm7
         '°' => ' deg',
     ];
 
-    public const string DEFAULT_ALPHABET = "@£\$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+    public const string DefaultAlphabet = "@£\$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
 
     /** Znaky rozšířené tabulky – každý zabírá 2 septety (escape + znak). */
-    public const string EXTENSION_ALPHABET = "^{}\[~]|€";
+    public const string ExtensionAlphabet = "^{}\[~]|€";
 
     /** Text bez diakritiky a znaků mimo GSM 7-bit (nepřevoditelné znaky se zahodí). */
     public static function convert(string $text): string
@@ -131,7 +131,7 @@ final class Gsm7
             return '';
         }
 
-        $s = strtr($text, self::MAP);
+        $s = strtr($text, self::Map);
         $s = str_replace(["\r\n", "\r"], "\n", $s);
 
         $out = [];
@@ -168,7 +168,7 @@ final class Gsm7
 
         $length = 0;
         foreach (mb_str_split($text, 1, 'UTF-8') as $ch) {
-            $length += str_contains(self::EXTENSION_ALPHABET, $ch) ? 2 : 1;
+            $length += str_contains(self::ExtensionAlphabet, $ch) ? 2 : 1;
         }
 
         return $length;
@@ -181,7 +181,7 @@ final class Gsm7
             return 0;
         }
 
-        $multi = self::isGsm7($text) ? self::MULTI_LENGTH : self::MULTI_LENGTH_UCS2;
+        $multi = self::isGsm7($text) ? self::MultiLength : self::MultiLengthUcs2;
         $length = self::length($text);
 
         return $length <= self::singleLength($text) ? 1 : (int) ceil($length / $multi);
@@ -190,7 +190,7 @@ final class Gsm7
     /** Kolik znaků se vejde do jedné SMS s tímto textem (160 v GSM 7-bit, 70 v UCS-2). */
     public static function singleLength(string $text): int
     {
-        return self::isGsm7($text) ? self::SINGLE_LENGTH : self::SINGLE_LENGTH_UCS2;
+        return self::isGsm7($text) ? self::SingleLength : self::SingleLengthUcs2;
     }
 
     /** Odejde text jako jedna SMS (nerozdělí se na víc účtovaných částí)? */
@@ -201,7 +201,7 @@ final class Gsm7
 
     private static function isGsm7Char(string $ch): bool
     {
-        return str_contains(self::DEFAULT_ALPHABET, $ch) || str_contains(self::EXTENSION_ALPHABET, $ch);
+        return str_contains(self::DefaultAlphabet, $ch) || str_contains(self::ExtensionAlphabet, $ch);
     }
 
 }

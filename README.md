@@ -98,8 +98,8 @@ $message->segments();
 
 | Kódování   | 1 SMS                            | vícedílná SMS                         |
 |------------|----------------------------------|---------------------------------------|
-| GSM 7-bit  | 160 znaků (`Gsm7::SINGLE_LENGTH`) | 153 / segment (`Gsm7::MULTI_LENGTH`)  |
-| UCS-2      | 70 znaků (`Gsm7::SINGLE_LENGTH_UCS2`) | 67 / segment (`Gsm7::MULTI_LENGTH_UCS2`) |
+| GSM 7-bit  | 160 znaků (`Gsm7::SingleLength`) | 153 / segment (`Gsm7::MultiLength`)  |
+| UCS-2      | 70 znaků (`Gsm7::SingleLengthUcs2`) | 67 / segment (`Gsm7::MultiLengthUcs2`) |
 
 Znaky rozšířené tabulky (`^{}\[~]|€`) zabírají 2 místa. Limity odpovídají [SmsManageru](https://smsmanager.cz/tool/delka-sms); API přijme až 1000 znaků a delší text rozdělí.
 

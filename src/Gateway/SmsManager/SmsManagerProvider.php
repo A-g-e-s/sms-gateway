@@ -19,7 +19,7 @@ use GuzzleHttp\Exception\GuzzleException;
 class SmsManagerProvider implements ProviderInterface
 {
 
-    private const string METHOD_SEND = 'message';
+    private const string MethodSend = 'message';
 
     private Client $httpClient;
 
@@ -51,7 +51,7 @@ class SmsManagerProvider implements ProviderInterface
         }
 
         try {
-            $response = $this->httpClient->post(self::METHOD_SEND, [
+            $response = $this->httpClient->post(self::MethodSend, [
                 'headers' => [
                     'Accept' => 'application/json',
                     'x-api-key' => $this->config->apiKey,

@@ -10,13 +10,13 @@ namespace Ages\SmsGateway\Config;
 readonly class SmsManagerConfig
 {
 
-    public const string API_URL = 'https://api.smsmngr.com/v2/';
+    public const string ApiUrl = 'https://api.smsmngr.com/v2/';
 
     public function __construct(
         public string $apiKey,
         /** Region (ISO 3166-1 alpha-2) pro čísla zadaná bez mezinárodní předvolby. */
         public string $defaultRegion = 'CZ',
-        public string $apiUrl = self::API_URL,
+        public string $apiUrl = self::ApiUrl,
         /** Timeout requestu v sekundách. */
         public int $timeout = 30,
     ) {
