@@ -11,6 +11,16 @@ namespace Ages\SmsGateway\Text;
 final class Gsm7
 {
 
+    /** Max. znaků jedné SMS v GSM 7-bit (bez diakritiky). */
+    public const int SINGLE_LENGTH = 160;
+
+    /** Max. znaků jedné SMS v UCS-2 (s diakritikou / znakem mimo GSM 7-bit). */
+    public const int SINGLE_LENGTH_UCS2 = 70;
+
+    /** Znaků na segment vícedílné SMS (část místa zabere hlavička pro spojení). */
+    public const int MULTI_LENGTH = 153;
+    public const int MULTI_LENGTH_UCS2 = 67;
+
     public const array MAP = [
         'Á' => 'A',
         'Ä' => 'A',
@@ -171,10 +181,22 @@ final class Gsm7
             return 0;
         }
 
-        [$single, $multi] = self::isGsm7($text) ? [160, 153] : [70, 67];
+        $multi = self::isGsm7($text) ? self::MULTI_LENGTH : self::MULTI_LENGTH_UCS2;
         $length = self::length($text);
 
-        return $length <= $single ? 1 : (int) ceil($length / $multi);
+        return $length <= self::singleLength($text) ? 1 : (int) ceil($length / $multi);
+    }
+
+    /** Kolik znaků se vejde do jedné SMS s tímto textem (160 v GSM 7-bit, 70 v UCS-2). */
+    public static function singleLength(string $text): int
+    {
+        return self::isGsm7($text) ? self::SINGLE_LENGTH : self::SINGLE_LENGTH_UCS2;
+    }
+
+    /** Odejde text jako jedna SMS (nerozdělí se na víc účtovaných částí)? */
+    public static function isSingle(string $text): bool
+    {
+        return self::length($text) <= self::singleLength($text);
     }
 
     private static function isGsm7Char(string $ch): bool

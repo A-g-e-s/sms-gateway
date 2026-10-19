@@ -10,6 +10,7 @@ use Ages\SmsGateway\Exception\GatewayInitializationException;
 use Ages\SmsGateway\Gateway\ProviderInterface;
 use Ages\SmsGateway\Gateway\SmsManager\SmsManagerProvider;
 use Ages\SmsGateway\Exception\InvalidPhoneNumberException;
+use Ages\SmsGateway\Exception\MessageTooLongException;
 
 /**
  * DI vstupní bod – provider(Provider) vrátí ProviderInterface nakonfigurovaného poskytovatele,
@@ -51,10 +52,11 @@ class SmsGateway
      *
      * @param array<string, string|int> $payload
      * @throws InvalidPhoneNumberException
+     * @throws MessageTooLongException
      */
-    public function message(string $text, string $phoneNumber, array $payload = [], bool $gsm7 = false): SmsMessage
+    public function message(string $text, string $phoneNumber, array $payload = [], bool $gsm7 = false, bool $single = false): SmsMessage
     {
-        return SmsMessage::of($text, $phoneNumber, $payload, $this->defaultRegion(), $gsm7);
+        return SmsMessage::of($text, $phoneNumber, $payload, $this->defaultRegion(), $gsm7, $single);
     }
 
     public function smsManager(): SmsManagerProvider

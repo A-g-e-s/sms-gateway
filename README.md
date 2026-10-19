@@ -34,6 +34,7 @@ Konfigurace poskytovatele je **volitelná** — `SmsGateway` autowire dle přít
 
 ```php
 use Ages\SmsGateway\Exception\InvalidPhoneNumberException;
+use Ages\SmsGateway\Exception\MessageTooLongException;
 
 try {
     $message = $this->smsGateway->message(
@@ -41,9 +42,12 @@ try {
         phoneNumber: $order->invoicePhone,          // '777 123 456', '+420777123456', …
         payload:     ['sms_outbox_id' => $sms->id], // volitelné – poskytovatel ho vrací ve webhooku
         gsm7:        true,                          // převést na GSM 7-bit (bez diakritiky)
+        single:      true,                          // volitelné – musí odejít jako 1 SMS
     );
 } catch (InvalidPhoneNumberException $e) {
     // neplatné číslo – API se vůbec nevolalo
+} catch (MessageTooLongException $e) {
+    // text by se rozdělil na víc SMS ($e->length / $e->maxLength) – API se vůbec nevolalo
 }
 
 $res = $this->smsGateway->send($message);
@@ -67,7 +71,7 @@ $this->smsGateway->provider(Provider::SmsManager)->send($message);
 $this->smsGateway->send($message, Provider::SmsManager);
 ```
 
-Zprávu lze sestavit i bez gateway: `SmsMessage::of($text, $phone, $payload, defaultRegion: 'SK', gsm7: true)`.
+Zprávu lze sestavit i bez gateway: `SmsMessage::of($text, $phone, $payload, defaultRegion: 'SK', gsm7: true, single: true)`.
 
 ### Stavy odeslání (`SendStatus` enum)
 
@@ -87,15 +91,17 @@ use Ages\SmsGateway\Text\Gsm7;
 Gsm7::convert('Žluťoučký kůň “úpěl”'); // 'Zlutoucky kun "upel"' – diakritika a typografické znaky pryč
 Gsm7::isGsm7($text);                    // false = pošle se v UCS-2 (jen 70 znaků / SMS)
 Gsm7::segments($text);                  // počet účtovaných SMS
+Gsm7::isSingle($text);                  // true = odejde jako 1 SMS
+Gsm7::singleLength($text);              // limit 1 SMS pro tento text (160 / 70)
 $message->segments();
 ```
 
-| Kódování   | 1 SMS     | vícedílná SMS  |
-|------------|-----------|----------------|
-| GSM 7-bit  | 160 znaků | 153 / segment  |
-| UCS-2      | 70 znaků  | 67 / segment   |
+| Kódování   | 1 SMS                            | vícedílná SMS                         |
+|------------|----------------------------------|---------------------------------------|
+| GSM 7-bit  | 160 znaků (`Gsm7::SINGLE_LENGTH`) | 153 / segment (`Gsm7::MULTI_LENGTH`)  |
+| UCS-2      | 70 znaků (`Gsm7::SINGLE_LENGTH_UCS2`) | 67 / segment (`Gsm7::MULTI_LENGTH_UCS2`) |
 
-Znaky rozšířené tabulky (`^{}\[~]|€`) zabírají 2 místa.
+Znaky rozšířené tabulky (`^{}\[~]|€`) zabírají 2 místa. Limity odpovídají [SmsManageru](https://smsmanager.cz/tool/delka-sms); API přijme až 1000 znaků a delší text rozdělí.
 
 ---
 
@@ -129,6 +135,7 @@ Všechny rozšiřují `Ages\SmsGateway\Exception\SmsGatewayException`.
 |----------------------------------|----------------------------------------------------------------|
 | `GatewayInitializationException` | poskytovatel není nakonfigurován / chybí `apiKey`              |
 | `InvalidPhoneNumberException`    | telefonní číslo nejde rozparsovat nebo není možné              |
+| `MessageTooLongException`        | `single: true` a text by se rozdělil na víc SMS (`$length`, `$maxLength`) |
 
 ---
 
@@ -147,7 +154,8 @@ src/
 ├── Exception/
 │   ├── SmsGatewayException.php
 │   ├── GatewayInitializationException.php
-│   └── InvalidPhoneNumberException.php
+│   ├── InvalidPhoneNumberException.php
+│   └── MessageTooLongException.php
 ├── Gateway/
 │   ├── ProviderInterface.php         send(SmsMessage): SendResult
 │   └── SmsManager/

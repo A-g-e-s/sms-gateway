@@ -3,6 +3,7 @@
 namespace Ages\SmsGateway\Entity;
 
 use Ages\SmsGateway\Exception\InvalidPhoneNumberException;
+use Ages\SmsGateway\Exception\MessageTooLongException;
 use Ages\SmsGateway\Text\Gsm7;
 use Brick\PhoneNumber\PhoneNumber;
 use Brick\PhoneNumber\PhoneNumberFormat;
@@ -32,7 +33,9 @@ final readonly class SmsMessage
     /**
      * @param array<string, string|int> $payload
      * @param bool $gsm7 true = text převést do GSM 7-bit (bez diakritiky) – levnější a delší segmenty
+     * @param bool $single true = zpráva musí odejít jako jedna SMS (160 znaků GSM 7-bit / 70 UCS-2), jinak výjimka
      * @throws InvalidPhoneNumberException
+     * @throws MessageTooLongException
      */
     public static function of(
         string $text,
@@ -40,7 +43,15 @@ final readonly class SmsMessage
         array $payload = [],
         string $defaultRegion = 'CZ',
         bool $gsm7 = false,
+        bool $single = false,
     ): self {
+        if ($gsm7) {
+            $text = Gsm7::convert($text);
+        }
+        if ($single && !Gsm7::isSingle($text)) {
+            throw new MessageTooLongException(Gsm7::length($text), Gsm7::singleLength($text));
+        }
+
         try {
             $number = PhoneNumber::parse($phoneNumber, $defaultRegion);
         } catch (PhoneNumberParseException $e) {
@@ -52,7 +63,7 @@ final readonly class SmsMessage
         }
 
         return new self(
-            $gsm7 ? Gsm7::convert($text) : $text,
+            $text,
             $number->format(PhoneNumberFormat::E164),
             array_map(static fn(string|int $v): string => (string) $v, $payload),
         );
