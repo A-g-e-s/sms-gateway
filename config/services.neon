@@ -1,0 +1,10 @@
+services:
+    # API klíč z administrace SmsManageru (Nastavení › API)
+    smsManagerConfig: Ages\SmsGateway\Config\SmsManagerConfig(
+        apiKey: ''
+        # defaultRegion: CZ                       # výchozí hodnota – předvolba pro čísla bez +420
+        # apiUrl: https://api.smsmngr.com/v2/     # výchozí hodnota
+        # timeout: 30                             # výchozí hodnota
+    )
+
+    - Ages\SmsGateway\SmsGateway
