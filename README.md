@@ -2,7 +2,7 @@
 
 Jednotné API pro odesílání SMS. Zatím podporuje **SmsManager** (REST API v2, `https://api.smsmngr.com/v2/`). Aplikace pracuje jen s entitami balíčku — přidání dalšího poskytovatele nevyžaduje změnu aplikačního kódu.
 
-Balíček jen odesílá. Evidenci zpráv (outbox, stavy, vazbu na objednávku) si vede aplikace.
+Balíček odesílá a umí zjistit stav kreditu a útratu za období. Evidenci zpráv (outbox, stavy, vazbu na objednávku) si vede aplikace.
 
 ## Požadavky
 
@@ -73,6 +73,31 @@ $this->smsGateway->send($message, Provider::SmsManager);
 
 Zprávu lze sestavit i bez gateway: `SmsMessage::of($text, $phone, $payload, defaultRegion: 'SK', gsm7: true, single: true)`.
 
+### Kredit a útrata
+
+```php
+use Ages\SmsGateway\Exception\ProviderException;
+
+try {
+    $balance = $this->smsGateway->balance();
+    $balance->amount;      // 1035.77 – zůstatek v měně účtu
+    $balance->currency;    // 'CZK'
+
+    $spend = $this->smsGateway->spend(new DateTimeImmutable('2026-09-01'), new DateTimeImmutable('2026-09-30'));
+    $spend->priceCzk;      // útrata za období
+    $spend->sent;          // počet odeslaných zpráv (účtovaných částí)
+    $spend->delivered;
+    $spend->averagePriceCzk();
+    foreach ($spend->days as $day) {   // SpendDay – jen dny, kdy se posílalo
+        $day->date->format('j. n.'); $day->sent; $day->priceCzk;
+    }
+} catch (ProviderException $e) {
+    // síť, neplatný klíč ($e->statusCode 401/403), chyba API – na rozdíl od send() se vyhazuje
+}
+```
+
+Obě období jsou včetně krajních dnů. Útrata jde z REST API v1 (`GET /requests`, jedno volání až na 366 dní) — cena po dnech v něm není zdokumentovaná, ale sedí se součtem cen jednotlivých zpráv. Kdyby ji API přestalo vracet, `spend()` vyhodí `ProviderException` místo tiché nuly.
+
 ### Stavy odeslání (`SendStatus` enum)
 
 | Hodnota    | Význam                                                               | `requestId` | `messageId` |
@@ -125,6 +150,36 @@ Znaky rozšířené tabulky (`^{}\[~]|€`) zabírají 2 místa. Limity odpovíd
 | `errorCode`    | `string\|null` | HTTP kód / kód odmítnutí / `transport` |
 | `errorMessage` | `string\|null` |                                        |
 
+### `CreditBalance`
+
+| Property    | Typ            | Popis                                  |
+|-------------|----------------|----------------------------------------|
+| `amount`    | `float`        | zůstatek v měně účtu                    |
+| `currency`  | `string`       | měna účtu (`CZK`, `EUR`)               |
+| `amountCzk` | `float`        | zůstatek v CZK                         |
+| `amountEur` | `float`        | zůstatek v EUR                         |
+| `vatPayer`  | `bool`         | účet je plátcem DPH                    |
+| `timezone`  | `string\|null` | časová zóna účtu                       |
+
+### `Spend`
+
+| Property            | Typ                 | Popis                                   |
+|---------------------|---------------------|-----------------------------------------|
+| `from`, `to`        | `DateTimeImmutable` | období (včetně krajních dnů)            |
+| `days`              | `list<SpendDay>`    | rozpad po dnech, seřazený               |
+| `sent`, `delivered` | `int`               | součty za období                        |
+| `priceCzk`          | `float`             | útrata v CZK                            |
+| `priceEur`          | `float`             | útrata v EUR                            |
+| `averagePriceCzk()` | `float`             | průměrná cena jedné zprávy              |
+
+### `SpendDay`
+
+| Property                                       | Typ                 |
+|------------------------------------------------|---------------------|
+| `date`                                         | `DateTimeImmutable` |
+| `sent`, `delivered`, `notDelivered`, `notSent` | `int`               |
+| `priceCzk`, `priceEur`                         | `float`             |
+
 ---
 
 ## Výjimky
@@ -136,6 +191,7 @@ Všechny rozšiřují `Ages\SmsGateway\Exception\SmsGatewayException`.
 | `GatewayInitializationException` | poskytovatel není nakonfigurován / chybí `apiKey`              |
 | `InvalidPhoneNumberException`    | telefonní číslo nejde rozparsovat nebo není možné              |
 | `MessageTooLongException`        | `single: true` a text by se rozdělil na víc SMS (`$length`, `$maxLength`) |
+| `ProviderException`              | `balance()` / `spend()` – síť, autorizace, chyba API (`$statusCode`) |
 
 ---
 
@@ -150,17 +206,21 @@ src/
 │   │   ├── Provider.php              výběr poskytovatele (SmsManager)
 │   │   └── SendStatus.php            Accepted / Rejected / Failed
 │   ├── SmsMessage.php                vstupní entita (normalizace čísla, GSM 7)
+│   ├── CreditBalance.php             stav kreditu
+│   ├── Spend.php                     útrata za období (součty + dny)
+│   ├── SpendDay.php
 │   └── SendResult.php
 ├── Exception/
 │   ├── SmsGatewayException.php
 │   ├── GatewayInitializationException.php
 │   ├── InvalidPhoneNumberException.php
+│   ├── ProviderException.php
 │   └── MessageTooLongException.php
 ├── Gateway/
-│   ├── ProviderInterface.php         send(SmsMessage): SendResult
+│   ├── ProviderInterface.php         send(), balance(), spend()
 │   └── SmsManager/
-│       └── SmsManagerProvider.php    POST /message, hlavička x-api-key
+│       └── SmsManagerProvider.php    POST /message (v2), GET /credit + /requests (REST v1)
 ├── Text/
 │   └── Gsm7.php                      převod do GSM 7-bit, počítání segmentů
-└── SmsGateway.php                    DI entry point – provider(Provider), send(), message()
+└── SmsGateway.php                    DI entry point – provider(Provider), send(), message(), balance(), spend()
 ```

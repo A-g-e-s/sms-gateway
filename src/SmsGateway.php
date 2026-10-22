@@ -3,10 +3,14 @@
 namespace Ages\SmsGateway;
 
 use Ages\SmsGateway\Config\SmsManagerConfig;
+use Ages\SmsGateway\Entity\CreditBalance;
 use Ages\SmsGateway\Entity\Enum\Provider;
 use Ages\SmsGateway\Entity\SendResult;
 use Ages\SmsGateway\Entity\SmsMessage;
+use Ages\SmsGateway\Entity\Spend;
 use Ages\SmsGateway\Exception\GatewayInitializationException;
+use Ages\SmsGateway\Exception\ProviderException;
+use DateTimeInterface;
 use Ages\SmsGateway\Gateway\ProviderInterface;
 use Ages\SmsGateway\Gateway\SmsManager\SmsManagerProvider;
 use Ages\SmsGateway\Exception\InvalidPhoneNumberException;
@@ -45,6 +49,26 @@ class SmsGateway
     public function send(SmsMessage $message, Provider|null $provider = null): SendResult
     {
         return $this->provider($provider ?? $this->defaultProvider())->send($message);
+    }
+
+    /**
+     * Aktuální stav kreditu u poskytovatele.
+     *
+     * @throws ProviderException
+     */
+    public function balance(Provider|null $provider = null): CreditBalance
+    {
+        return $this->provider($provider ?? $this->defaultProvider())->balance();
+    }
+
+    /**
+     * Útrata za období (včetně obou krajních dnů) – součty a rozpad po dnech.
+     *
+     * @throws ProviderException
+     */
+    public function spend(DateTimeInterface $from, DateTimeInterface $to, Provider|null $provider = null): Spend
+    {
+        return $this->provider($provider ?? $this->defaultProvider())->spend($from, $to);
     }
 
     /**

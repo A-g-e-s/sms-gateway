@@ -4,6 +4,7 @@ services:
         apiKey: ''
         # defaultRegion: CZ                       # výchozí hodnota – předvolba pro čísla bez +420
         # apiUrl: https://api.smsmngr.com/v2/     # výchozí hodnota
+        # restApiUrl: https://rest-api.smsmngr.com/v1/  # výchozí hodnota – kredit, útrata
         # timeout: 30                             # výchozí hodnota
     )
 
